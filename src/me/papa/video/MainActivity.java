@@ -22,18 +22,21 @@ public class MainActivity extends Activity {
     private VideoSenderView senderView;
 
     private VideoReceiverView mReceiverView;
+
     @Override
     protected void onPause() {
         mReceiverView.relase();
         senderView.relase();
         super.onPause();
     }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mReceiverView = (VideoReceiverView) findViewById(R.id.videoReceiverView);
-        mReceiverView.startService("/mnt/sdcard/aa/videooutput1371807176674.mp4");
+
         senderView = (VideoSenderView) findViewById(R.id.videoSenderView);
 
     }
@@ -42,6 +45,15 @@ public class MainActivity extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+        if (!HttpServerManager.getInstance().isConnected()) {
+            HttpServerManager.getInstance().startConnectToService();
+            
+        }else
+        {
+            mReceiverView.startService("/mnt/sdcard/aa/videooutput1371807176674.mp4");
+        }
+
+        
         return true;
     }
 
@@ -80,6 +92,5 @@ public class MainActivity extends Activity {
         }.execute();
 
     }
-   
 
 }

@@ -3,8 +3,6 @@ package me.papa.widget;
 import java.io.File;
 
 import me.papa.managers.HttpServerManager;
-import me.papa.video.services.HttpServer;
-
 import android.content.Context;
 import android.net.Uri;
 import android.util.AttributeSet;
@@ -20,6 +18,10 @@ public class VideoReceiverView extends VideoView implements Callback {
     //    private SurfaceHolder mSurfaceHolder;
 
     public void startService(String string) {
+        if (!HttpServerManager.getInstance().isConnected()) {
+            Log.d(TAG, "HttpServerManager  is not connect");
+            return;
+        }
         File file = new File("/mnt/sdcard/aa");
         String path = "";
         if (file.exists()) {
@@ -29,7 +31,7 @@ public class VideoReceiverView extends VideoView implements Callback {
             //            name = fs[fs.length - 1].getName();
             setVideoURI(Uri.parse(path));
         }
-        setVideoPath("http://localhost:" + HttpServerManager.port + "/" + path);
+        setVideoPath("http://localhost:" + HttpServerManager.port + "/hhhhhhhh" );
         start();
     }
 

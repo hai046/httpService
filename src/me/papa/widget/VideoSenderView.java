@@ -201,7 +201,7 @@ public class VideoSenderView extends RelativeLayout implements Callback {
 
                     Socket receiver = new Socket(InetAddress.getByName("localhost"),
                             HttpServerManager.port);
-
+                    
                     ParcelFileDescriptor pfd = ParcelFileDescriptor.fromSocket(receiver);
                     mMediaRecorder.setOutputFile(pfd.getFileDescriptor());
 

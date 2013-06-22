@@ -1,5 +1,7 @@
 package me.papa.video.services;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -15,6 +17,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -25,6 +29,7 @@ import java.util.TimeZone;
 import java.util.Vector;
 
 import me.papa.utils.MyLog;
+import android.text.TextUtils;
 import android.util.Log;
 
 public class HttpServer {
@@ -200,6 +205,66 @@ public class HttpServer {
 
     }
 
+    BufferedInputStream serviceInputStream = null;
+
+    BufferedOutputStream serviceBOutputStream = null;
+
+    public BufferedInputStream getServiceInputStream() {
+        return serviceInputStream;
+
+    }
+
+    public BufferedOutputStream getOutputStream() {
+        return serviceBOutputStream;
+    }
+
+    private boolean isConnected = false;
+
+    public boolean isConnected() {
+        return mConntectServiceSocket != null && mConntectServiceSocket.isConnected();
+    }
+
+    private Socket mConntectServiceSocket;
+
+    public void startConnectToService() {
+        if (mConntectServiceSocket != null && mConntectServiceSocket.isConnected()) {
+            return;
+        }
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                // TODO Auto-generated method stub
+
+                try {
+                    mConntectServiceSocket = new Socket("10.10.5.20", 9090);
+                    InputStream is = mConntectServiceSocket.getInputStream();
+                    OutputStream os = mConntectServiceSocket.getOutputStream();
+
+                    serviceInputStream = new BufferedInputStream(is);
+                    serviceBOutputStream = new BufferedOutputStream(os);
+
+                    serviceBOutputStream.write("8000000000".getBytes());
+                    serviceBOutputStream.flush();
+                    if (!mConntectServiceSocket.isConnected()) {
+                        Log.e(TAG, "service close");
+                        isConnected = false;
+                    } else {
+                        isConnected = true;
+                        Log.e(TAG, "service connect");
+                    }
+
+                } catch (UnknownHostException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
     /**
      * Stops the server.
      */
@@ -233,9 +298,10 @@ public class HttpServer {
                 // Read the first 8192 bytes.
                 // The full header should fit in here.
                 // Apache's default header limit is 8KB.
-                int bufsize = 8192;
+                int bufsize = 4096;
                 byte[] buf = new byte[bufsize];
                 int rlen = is.read(buf, 0, bufsize);
+                Log.e(TAG, "rlen=" + rlen);
                 if (rlen <= 0) return;
 
                 // Create a BufferedReader for parsing the header.
@@ -245,18 +311,53 @@ public class HttpServer {
                 Properties parms = new Properties();
                 Properties header = new Properties();
                 Properties files = new Properties();
-
                 // Decode the header into parms and header java properties
                 decodeHeader(hin, pre, parms, header);
                 String method = pre.getProperty("method");
                 String uri = pre.getProperty("uri");
+                Log.e(TAG, "uri=" + uri);
+                if (TextUtils.isEmpty(uri)) {
+                    int length = -1;
+                    byte bs[] = new byte[] { 0, 0 };
+                    while ((length = is.read(buf)) != -1) {
+                        if (isConnected()) {
+                            try {
+                                Log.i(TAG, "bs =" + bs[1] + bs[0] + ", length =" + length
+                                        + ", buf.length = " + buf.length);
+                                serviceBOutputStream.write(bs);
+                                serviceBOutputStream.write((byte) (length << 24) & 0xFFF0);
+                                serviceBOutputStream.write((byte) (length << 16) & 0xFF00);
+                                serviceBOutputStream.write((byte) (length << 8) & 0xF000);
+                                serviceBOutputStream.write((byte) length);
+                                //                                serviceBOutputStream.write(length);
+                                serviceBOutputStream.write(buf, 0, length);
+                                serviceBOutputStream.flush();
+                            } catch (Exception ex) {
+                                serviceBOutputStream.close();
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                } else {
+                    int lg = -1;
+                    Log.i(TAG, "lg=" + lg + "1111111111111isConnected=" + isConnected());
+                    OutputStream out = mySocket.getOutputStream();
+                    if (isConnected() == false) {
+                        return;
+                    }
+                    if (serviceInputStream != null) {
 
-                    
-                if("".equalsIgnoreCase(uri))
-                {
-                    
+                        while ((lg = serviceInputStream.read(buf)) != -1) {
+                            if (lg > 2) {
+                                out.write(buf, 6, lg);
+                            } else {
+
+                            }
+                            Log.i(TAG, "lg=" + lg);
+                        }
+                    }
                 }
-                
+
                 long size = 0x7FFFFFFFFFFFFFFFl;
                 String contentLength = header.getProperty("content-length");
                 if (contentLength != null) {
@@ -378,14 +479,22 @@ public class HttpServer {
                 String inLine = in.readLine();
                 if (inLine == null) return;
                 StringTokenizer st = new StringTokenizer(inLine);
-                if (!st.hasMoreTokens()) sendError(HTTP_BADREQUEST,
-                        "BAD REQUEST: Syntax error. Usage: GET /example/file.html");
+                if (!st.hasMoreTokens()) {
+                    Log.i(TAG, "hhhhh");
+                    return;
+                    //                    sendError(HTTP_BADREQUEST,
+                    //                            "BAD REQUEST: Syntax error. Usage: GET /example/file.html");
+                }
 
                 String method = st.nextToken();
                 pre.put("method", method);
 
-                if (!st.hasMoreTokens()) sendError(HTTP_BADREQUEST,
-                        "BAD REQUEST: Missing URI. Usage: GET /example/file.html");
+                if (!st.hasMoreTokens()) {
+                    Log.i(TAG, "hhhhh23333333");
+                    return;
+                    //                    sendError(HTTP_BADREQUEST,
+                    //                            "BAD REQUEST: Missing URI. Usage: GET /example/file.html");
+                }
 
                 String uri = st.nextToken();
 
@@ -394,8 +503,10 @@ public class HttpServer {
                 if (qmi >= 0) {
                     decodeParms(uri.substring(qmi + 1), parms);
                     uri = decodePercent(uri.substring(0, qmi));
-                } else uri = decodePercent(uri);
-
+                } else {
+                    uri = decodePercent(uri);
+                }
+                Log.e(TAG, "uri=" + uri);
                 // If there's another token, it's protocol version,
                 // followed by HTTP headers. Ignore version but parse headers.
                 // NOTE: this now forces header names lowercase since they are
@@ -404,16 +515,21 @@ public class HttpServer {
                     String line = in.readLine();
                     while (line != null && line.trim().length() > 0) {
                         int p = line.indexOf(':');
-                        if (p >= 0) header.put(line.substring(0, p).trim().toLowerCase(), line
-                                .substring(p + 1).trim());
+                        Log.e(TAG, "line=" + line);
+                        if (p >= 0) {
+                            header.put(line.substring(0, p).trim().toLowerCase(),
+                                    line.substring(p + 1).trim());
+                        }
                         line = in.readLine();
+
                     }
                 }
 
                 pre.put("uri", uri);
             } catch (IOException ioe) {
-                sendError(HTTP_INTERNALERROR,
-                        "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
+                ioe.printStackTrace();
+                //                sendError(HTTP_INTERNALERROR,
+                //                        "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
             }
         }
 
