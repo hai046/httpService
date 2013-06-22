@@ -322,14 +322,25 @@ public class HttpServer {
                     while ((length = is.read(buf)) != -1) {
                         if (isConnected()) {
                             try {
-                                Log.i(TAG, "bs =" + bs[1] + bs[0] + ", length =" + length
-                                        + ", buf.length = " + buf.length);
+                                //                                Log.i(TAG,
+                                //                                        "bs =" + bs[1] + bs[0] + ", length =" + length
+                                //                                                + ", buf.length = " + buf.length
+                                //                                                + "    Integer.toHexString(length)="
+                                //                                                + Integer.toBinaryString(length));
                                 serviceBOutputStream.write(bs);
-                                serviceBOutputStream.write((byte) (length << 24) & 0xFFF0);
-                                serviceBOutputStream.write((byte) (length << 16) & 0xFF00);
-                                serviceBOutputStream.write((byte) (length << 8) & 0xF000);
-                                serviceBOutputStream.write((byte) length);
-                                //                                serviceBOutputStream.write(length);
+                                byte bufferLg[] = new byte[] { (byte) (length >> 24),
+                                        (byte) (length >> 16), (byte) (length >> 8),
+                                        (byte) (length) };
+                                Log.i(TAG, "bs =" + bs[1] + bs[0] + ", bufferLg =" + bufferLg[0]
+                                        + bufferLg[1] + bufferLg[2] + bufferLg[3] + "   lg="
+                                        + length);
+                                //                                Log.i(TAG,
+                                //                                        Integer.toBinaryString(bufferLg[0])
+                                //                                                + Integer.toBinaryString(bufferLg[1])
+                                //                                                + Integer.toBinaryString(bufferLg[2])
+                                //                                                + Integer.toBinaryString(bufferLg[3]) + "   lg="
+                                //                                                + length+);
+                                serviceBOutputStream.write(length);
                                 serviceBOutputStream.write(buf, 0, length);
                                 serviceBOutputStream.flush();
                             } catch (Exception ex) {
@@ -353,7 +364,7 @@ public class HttpServer {
                             } else {
 
                             }
-                            Log.i(TAG, "lg=" + lg);
+                            Log.i(TAG, "lg==================" + lg);
                         }
                     }
                 }
