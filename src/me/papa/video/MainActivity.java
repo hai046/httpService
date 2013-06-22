@@ -45,21 +45,19 @@ public class MainActivity extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
-        if (!HttpServerManager.getInstance().isConnected()) {
-            HttpServerManager.getInstance().startConnectToService();
-            
-        }else
-        {
-            mReceiverView.startService("/mnt/sdcard/aa/videooutput1371807176674.mp4");
-        }
 
-        
         return true;
     }
 
     @Override
     public boolean onMenuItemSelected(int featureId, MenuItem item) {
         //        http://10.10.9.139:9000
+        if (!HttpServerManager.getInstance().isConnected()) {
+            HttpServerManager.getInstance().startConnectToService();
+
+        } else {
+            mReceiverView.startService("/mnt/sdcard/aa/videooutput1371807176674.mp4");
+        }
 
         return super.onMenuItemSelected(featureId, item);
     }

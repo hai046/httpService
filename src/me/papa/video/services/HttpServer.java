@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.RandomAccessFile;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
@@ -281,6 +282,8 @@ public class HttpServer {
      */
     private class HTTPSession implements Runnable {
 
+        private Socket mySocket;
+
         public HTTPSession(Socket s) {
             mySocket = s;
             Thread t = new Thread(this);
@@ -289,20 +292,34 @@ public class HttpServer {
             MyLog.i(TAG, "HTTPSession   " + s);
         }
 
+        public byte[] int2byte(int res) {
+            byte[] targets = new byte[4];
+
+            targets[0] = (byte) (res & 0xff);// 最低位 
+            targets[1] = (byte) ((res >> 8) & 0xff);// 次低位 
+            targets[2] = (byte) ((res >> 16) & 0xff);// 次高位 
+            targets[3] = (byte) (res >>> 24);// 最高位,无符号右移。 
+            return targets;
+        }
+
         public void run() {
             try {
 
                 InputStream is = mySocket.getInputStream();
-                if (is == null) return;
+                if (is == null) {
+                    return;
+                }
                 Log.i(TAG, "HTTPSessionHTTPSessionHTTPSession  running");
                 // Read the first 8192 bytes.
                 // The full header should fit in here.
                 // Apache's default header limit is 8KB.
-                int bufsize = 4096;
+                int bufsize = 8192;
                 byte[] buf = new byte[bufsize];
                 int rlen = is.read(buf, 0, bufsize);
                 Log.e(TAG, "rlen=" + rlen);
-                if (rlen <= 0) return;
+                if (rlen <= 0) {
+                    return;
+                }
 
                 // Create a BufferedReader for parsing the header.
                 ByteArrayInputStream hbis = new ByteArrayInputStream(buf, 0, rlen);
@@ -315,33 +332,24 @@ public class HttpServer {
                 decodeHeader(hin, pre, parms, header);
                 String method = pre.getProperty("method");
                 String uri = pre.getProperty("uri");
-                Log.e(TAG, "uri=" + uri);
+                Log.e(TAG, "uri==========================" + uri);
+                bufsize = 4096;
+                //接受相机传过来的数据   并传给服务器
                 if (TextUtils.isEmpty(uri)) {
                     int length = -1;
-                    byte bs[] = new byte[] { 0, 0 };
                     while ((length = is.read(buf)) != -1) {
                         if (isConnected()) {
                             try {
-                                //                                Log.i(TAG,
-                                //                                        "bs =" + bs[1] + bs[0] + ", length =" + length
-                                //                                                + ", buf.length = " + buf.length
-                                //                                                + "    Integer.toHexString(length)="
-                                //                                                + Integer.toBinaryString(length));
-                                serviceBOutputStream.write(bs);
-                                byte bufferLg[] = new byte[] { (byte) (length >> 24),
-                                        (byte) (length >> 16), (byte) (length >> 8),
-                                        (byte) (length) };
-                                Log.i(TAG, "bs =" + bs[1] + bs[0] + ", bufferLg =" + bufferLg[0]
-                                        + bufferLg[1] + bufferLg[2] + bufferLg[3] + "   lg="
-                                        + length);
-                                //                                Log.i(TAG,
-                                //                                        Integer.toBinaryString(bufferLg[0])
-                                //                                                + Integer.toBinaryString(bufferLg[1])
-                                //                                                + Integer.toBinaryString(bufferLg[2])
-                                //                                                + Integer.toBinaryString(bufferLg[3]) + "   lg="
-                                //                                                + length+);
-                                serviceBOutputStream.write(length);
-                                serviceBOutputStream.write(buf, 0, length);
+                                byte bufferLg[] = int2byte(length);
+                                byte[] newbyte = new byte[length + 6];
+                                newbyte[0] = 0;
+                                newbyte[1] = 0;
+                                newbyte[2] = bufferLg[0];
+                                newbyte[3] = bufferLg[1];
+                                newbyte[4] = bufferLg[2];
+                                newbyte[5] = bufferLg[3];
+                                System.arraycopy(buf, 0, newbyte, 6, length);
+                                serviceBOutputStream.write(newbyte, 0, newbyte.length);
                                 serviceBOutputStream.flush();
                             } catch (Exception ex) {
                                 serviceBOutputStream.close();
@@ -350,6 +358,7 @@ public class HttpServer {
                         }
                     }
                 } else {
+                    //接受服务器的数据
                     int lg = -1;
                     Log.i(TAG, "lg=" + lg + "1111111111111isConnected=" + isConnected());
                     OutputStream out = mySocket.getOutputStream();
@@ -357,12 +366,11 @@ public class HttpServer {
                         return;
                     }
                     if (serviceInputStream != null) {
-
                         while ((lg = serviceInputStream.read(buf)) != -1) {
                             if (lg > 2) {
-                                out.write(buf, 6, lg);
+                                out.write(buf, 6, lg - 6);
                             } else {
-
+                                //小于2服务器 控制流
                             }
                             Log.i(TAG, "lg==================" + lg);
                         }
@@ -488,10 +496,13 @@ public class HttpServer {
             try {
                 // Read the request line
                 String inLine = in.readLine();
-                if (inLine == null) return;
+                Log.e(TAG, "inLine=" + inLine);
+                if (inLine == null) {
+                    return;
+                }
                 StringTokenizer st = new StringTokenizer(inLine);
                 if (!st.hasMoreTokens()) {
-                    Log.i(TAG, "hhhhh");
+                    Log.e(TAG, "hhhhh");
                     return;
                     //                    sendError(HTTP_BADREQUEST,
                     //                            "BAD REQUEST: Syntax error. Usage: GET /example/file.html");
@@ -499,9 +510,8 @@ public class HttpServer {
 
                 String method = st.nextToken();
                 pre.put("method", method);
-
                 if (!st.hasMoreTokens()) {
-                    Log.i(TAG, "hhhhh23333333");
+                    Log.e(TAG, "hhhhh23333333");
                     return;
                     //                    sendError(HTTP_BADREQUEST,
                     //                            "BAD REQUEST: Missing URI. Usage: GET /example/file.html");
@@ -787,7 +797,6 @@ public class HttpServer {
             }
         }
 
-        private Socket mySocket;
     }
 
     /**

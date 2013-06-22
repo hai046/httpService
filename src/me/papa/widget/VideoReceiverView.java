@@ -1,12 +1,9 @@
 package me.papa.widget;
 
-import java.io.File;
-
 import me.papa.managers.HttpServerManager;
 import android.content.Context;
 import android.net.Uri;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import android.widget.VideoView;
@@ -17,21 +14,22 @@ public class VideoReceiverView extends VideoView implements Callback {
 
     //    private SurfaceHolder mSurfaceHolder;
 
-    public void startService(String string) {
-        if (!HttpServerManager.getInstance().isConnected()) {
-            Log.d(TAG, "HttpServerManager  is not connect");
-            return;
-        }
-        File file = new File("/mnt/sdcard/aa");
-        String path = "";
-        if (file.exists()) {
-            File[] fs = file.listFiles();
-            path = fs[fs.length - 1].getPath();
-            Log.e(TAG, "path=" + path);
-            //            name = fs[fs.length - 1].getName();
-            setVideoURI(Uri.parse(path));
-        }
-        setVideoPath("http://localhost:" + HttpServerManager.port + "/hhhhhhhh" );
+    public void startService(String path) {
+        //        if (!HttpServerManager.getInstance().isConnected()) {
+        //            Log.d(TAG, "HttpServerManager  is not connect");
+        //            return;
+        //        }
+        //        File file = new File("/mnt/sdcard/aa");
+        //        String path = "";
+        //        if (file.exists()) {
+        //            File[] fs = file.listFiles();
+        //            path = fs[fs.length - 1].getPath();
+        //            Log.e(TAG, "path=" + path);
+        //            //            name = fs[fs.length - 1].getName();
+        setVideoURI(Uri.parse("http://localhost:" + HttpServerManager.port
+                + "/videooutput1371801702402.mp4"));
+        //        }
+        //        setVideoPath(string);
         start();
     }
 
